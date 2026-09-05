@@ -24,6 +24,7 @@ import logging
 import os
 import secrets
 import urllib.request
+from dataclasses import fields as _fields
 from datetime import datetime, timezone
 from pathlib import Path
 from tibet_ping import IoTNode, TransportConfig
@@ -57,6 +58,16 @@ def _http_register(did: str, ip: str, port: int) -> None:
 # OBSERVED addr (peer tracker) and relays `overlay.punch_request(app_addr, nonce)` to the box over the
 # already-open box<->hub hole. The box then punches toward the app (box_status_ping._punch_sender). The hub
 # holds NO trust here — it only reflects addresses and relays the request; the box.status gate stays the proof.
+# EEN GEVESTIGDE STANDING, IN DE VORM DIE HET PAKKET KENT.
+#
+# 0.3.2 zegt 't met een scalar (`trust_score=1.0`), 0.3.5 met een posture (`posture="known"`) —
+# en 0.3.5 WEIGERT trust_score met een TypeError. Zonder deze shim zou een uitrol elke
+# `overlay.want` breken, en dat is precies het punch-pad waarmee de app door een CGNAT komt.
+# Zelfde einddatum als de andere arm: weg zodra 0.3.5 overal draait.
+_STANDING = ({"posture": "known"}
+             if "posture" in {f.name for f in _fields(PingResponse)}
+             else {"trust_score": 1.0})
+
 WANT_INTENT = "overlay.want"
 PUNCH_REQUEST_INTENT = "overlay.punch_request"
 _WANT_QUEUE: list = []            # (app_did, target_box_did, nonce) enqueued by the sync handler
@@ -78,7 +89,7 @@ class WantHandler(PingHandler):
             return PingResponse(
                 response_id="resp_" + secrets.token_hex(8), in_response_to=packet.packet_id,
                 responder_did=self.device_did, decision=PingDecision.ACCEPT, airlock_zone="GROEN",
-                trust_score=1.0, payload={"queued": True})
+                payload={"queued": True}, **_STANDING)
         return super().handle(packet)
 
 
