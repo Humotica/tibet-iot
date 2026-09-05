@@ -77,7 +77,21 @@ class WantHandler(PingHandler):
     """Short-circuits overlay.want; delegates everything else to the normal airlock handler."""
 
     def __init__(self, base):
-        super().__init__(base.device_did, base.airlock, base.nonce_tracker, base.vouch_registry)
+        # DE KNOWN-SET MOET MEE. Dit was de echte reden dat de hub NIEMAND antwoordde.
+        #
+        # main() roept set_known/set_trust aan op de ORIGINELE handler en vervangt die daarna
+        # door deze wrapper. Zonder overdracht start `_known` leeg, krijgt elke afzender posture
+        # UNKNOWN -> ROOD -> stille drop, en time-out zelfs jasper.aint's eigen laptop. Gemeten
+        # 5 sep 2026: `jis:root:ai` staat in TRUSTED_DEVICES en kwam er tóch uit als unknown.
+        #
+        # De naam verschilt per pakketversie, dus we vragen beide: 0.3.5 heeft `_known` (set),
+        # 0.3.2 had `_known_devices` (dict did->float). Allebei gaan als `known_devices` naar
+        # binnen, waar de constructor er de juiste vorm van maakt.
+        carried = getattr(base, "_known", None)
+        if carried is None:
+            carried = getattr(base, "_known_devices", None)
+        super().__init__(base.device_did, base.airlock, base.nonce_tracker, base.vouch_registry,
+                         known_devices=carried)
 
     def handle(self, packet):
         if packet.intent and packet.intent not in ("heartbeat", ""):
