@@ -201,3 +201,25 @@ MIT — Humotica
 - [Humotica](https://humotica.com)
 - [IETF TIBET Draft](https://datatracker.ietf.org/doc/draft-vandemeent-tibet-provenance/)
 - [IETF JIS Draft](https://datatracker.ietf.org/doc/draft-vandemeent-jis-identity/)
+
+
+## Credits
+
+Designed by [Jasper van de Meent](https://github.com/jaspertvdm). Built by Jasper and [Root AI](https://humotica.com) as part of [HumoticaOS](https://humotica.com).
+
+---
+
+**Stack-positie:** Groep `agentic` · Bootstrap = OSAPI-handshake naar [`tibet`](https://pypi.org/project/tibet-core/) + [`jis`](https://pypi.org/project/jis-core/) (fail → snaft-rule + tibet-pol-rapport) · ← [`tibet-ping`](https://pypi.org/project/tibet-ping/) · [`tibet-edge`](https://pypi.org/project/tibet-edge/) → · See `STACK.md` · See `demo/golden-path/` for the spine end-to-end.
+---
+
+## Enterprise
+
+For private hub hosting, SLA support, custom integrations, or compliance guidance:
+
+| | |
+|---|---|
+| **Enterprise** | enterprise@humotica.com |
+| **Support** | support@humotica.com |
+| **Security** | security@humotica.com |
+
+See [ENTERPRISE.md](ENTERPRISE.md) for details.

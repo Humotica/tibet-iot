@@ -21,8 +21,11 @@ Trusted DIDs:
 import asyncio
 import json
 import logging
+import os
 import secrets
 import urllib.request
+from datetime import datetime, timezone
+from pathlib import Path
 from tibet_ping import IoTNode, TransportConfig
 from tibet_ping.handler import PingHandler
 from tibet_ping.proto import PingDecision, PingResponse, PingType, Priority, RoutingMode
@@ -151,6 +154,69 @@ async def sync_overlay_loop(node: IoTNode):
             logger.error(f"Overlay sync error: {e}")
             await asyncio.sleep(10.0)
 
+# GEEL HEEFT EEN BEL NODIG — anders is de hold een zwart gat (#131/#169).
+#
+# De AirlockGate biedt `on_hitl_needed` al aan en `approve_pending()` bestaat, maar deze hub gaf
+# de callback nooit mee. Gemeten 5 sep 2026: pings landden in de pending queue, er werd nooit
+# iemand gebeld, en de beller zag een timeout die niet van een kapotte kabel te onderscheiden was.
+#
+# De wachtrij is een JSONL zodat 'ie een herstart overleeft. Zonder duurzaamheid is een hold geen
+# hold maar een drop met betere manieren.
+HITL_QUEUE = os.environ.get(
+    "TIBET_HUB_HITL_QUEUE", str(Path(__file__).resolve().parent / "hitl-pending.jsonl"))
+HITL_OWNER = os.environ.get("TIBET_HUB_HITL_OWNER", "jasper.aint")
+# EEN BEL MAG GEEN AANVALSVLAK WORDEN. GEEL komt van een VOUCHED posture, dus 'ie is al begrensd
+# door de vouch-registry — maar een plafond is goedkoper dan vertrouwen op die aanname.
+HITL_MAX_PENDING = int(os.environ.get("TIBET_HUB_HITL_MAX", "512"))
+_hitl_written = 0
+
+
+def _hitl_bell(pending) -> None:
+    """Schrijf de hold duurzaam weg en roep de eigenaar. Loopt NOOIT stil af."""
+    global _hitl_written
+    src = getattr(pending, "source_did", None) or getattr(pending, "packet_id", "?")
+    if _hitl_written >= HITL_MAX_PENDING:
+        # EERLIJK DEGRADEREN, NIET STIL. Het record zegt zelf dat het niet meer schrijft.
+        logger.warning("HITL queue at cap %d — holding in memory only, from %s",
+                       HITL_MAX_PENDING, src)
+        return
+    row = {
+        "kind": "org.ainternet.tping.hitl-pending.v1",
+        "packet_id": getattr(pending, "packet_id", None),
+        "source_did": getattr(pending, "source_did", None),
+        "intent": getattr(pending, "intent", None),
+        "at": datetime.now(timezone.utc).isoformat(),
+        "notifies": HITL_OWNER,
+        "exit": "airlock.approve_pending(packet_id) / reject — and that writes its own receipt",
+    }
+    try:
+        with open(HITL_QUEUE, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(row) + "\n")
+        _hitl_written += 1
+    except OSError as exc:
+        logger.error("HITL queue unwritable (%s) — hold is NOT durable: %s", HITL_QUEUE, exc)
+    logger.info("HITL held for %s: %s intent=%s -> %s",
+                HITL_OWNER, row["source_did"], row["intent"], HITL_QUEUE)
+
+
+def _wire_hitl_bell(node) -> int:
+    """Haak de bel aan de airlock en meld hoeveel holds een herstart overleefd hebben."""
+    gate = getattr(getattr(node._ping_node, "handler", None), "airlock", None)
+    if gate is None:
+        logger.error("no airlock on the handler — GEEL would queue with nobody to ask")
+        return -1
+    gate.on_hitl_needed = _hitl_bell
+    carried = 0
+    try:
+        with open(HITL_QUEUE, encoding="utf-8") as fh:
+            carried = sum(1 for line in fh if line.strip())
+    except OSError:
+        pass
+    logger.info("HITL bell wired -> %s (owner=%s, %d carried over a restart)",
+                HITL_QUEUE, HITL_OWNER, carried)
+    return carried
+
+
 async def main():
     config = TransportConfig(bind_port=7150)
     node = IoTNode("jis:dl360:hub", config=config)
@@ -165,6 +231,9 @@ async def main():
 
     # Inject the coordinated-punch want-handler (overlay.want short-circuit; everything else = normal airlock)
     node._ping_node.handler = WantHandler(node._ping_node.handler)
+
+    # De hold krijgt z'n EXIT: bel + duurzame wachtrij (#131/#169).
+    _wire_hitl_bell(node)
 
     # Global access for API integration
     global hub_node

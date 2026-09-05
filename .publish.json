@@ -1,0 +1,20 @@
+{
+  "package": "tibet-iot",
+  "registries": {
+    "pypi": {
+      "url": "https://pypi.org/project/tibet-iot/",
+      "version": "0.1.1",
+      "deprecated": true
+    },
+    "github": {
+      "url": "https://github.com/Humotica/tibet-iot",
+      "remote": "git@github.com:Humotica/tibet-iot.git"
+    }
+  },
+  "publish": {
+    "pypi": {
+      "command": "cd /srv/jtel-stack/packages/tibet-iot && python -m build && twine upload dist/*",
+      "auth": "~/.pypirc [pypi] token"
+    }
+  }
+}

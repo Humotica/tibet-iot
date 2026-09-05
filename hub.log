@@ -1,0 +1,29 @@
+Traceback (most recent call last):
+  File [35m"/srv/jtel-stack/packages/tibet-iot/listen_hub.py"[0m, line [35m193[0m, in [35m<module>[0m
+    [31masyncio.run[0m[1;31m(main())[0m
+    [31m~~~~~~~~~~~[0m[1;31m^^^^^^^^[0m
+  File [35m"/usr/lib/python3.13/asyncio/runners.py"[0m, line [35m195[0m, in [35mrun[0m
+    return [31mrunner.run[0m[1;31m(main)[0m
+           [31m~~~~~~~~~~[0m[1;31m^^^^^^[0m
+  File [35m"/usr/lib/python3.13/asyncio/runners.py"[0m, line [35m118[0m, in [35mrun[0m
+    return [31mself._loop.run_until_complete[0m[1;31m(task)[0m
+           [31m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m[1;31m^^^^^^[0m
+  File [35m"/usr/lib/python3.13/asyncio/base_events.py"[0m, line [35m725[0m, in [35mrun_until_complete[0m
+    return [31mfuture.result[0m[1;31m()[0m
+           [31m~~~~~~~~~~~~~[0m[1;31m^^[0m
+  File [35m"/srv/jtel-stack/packages/tibet-iot/listen_hub.py"[0m, line [35m164[0m, in [35mmain[0m
+    await node.start()
+  File [35m"/usr/local/lib/python3.13/dist-packages/tibet_ping/transport/iot_node.py"[0m, line [35m134[0m, in [35mstart[0m
+    await self._transport.start()
+  File [35m"/usr/local/lib/python3.13/dist-packages/tibet_ping/transport/udp.py"[0m, line [35m131[0m, in [35mstart[0m
+    self._transport, self._protocol = [1;31mawait loop.create_datagram_endpoint([0m
+                                      [1;31m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+    ...<2 lines>...
+    [1;31m)[0m
+    [1;31m^[0m
+  File [35m"/usr/lib/python3.13/asyncio/base_events.py"[0m, line [35m1467[0m, in [35mcreate_datagram_endpoint[0m
+    raise exceptions[0]
+  File [35m"/usr/lib/python3.13/asyncio/base_events.py"[0m, line [35m1451[0m, in [35mcreate_datagram_endpoint[0m
+    [31msock.bind[0m[1;31m(local_address)[0m
+    [31m~~~~~~~~~[0m[1;31m^^^^^^^^^^^^^^^[0m
+[1;35mOSError[0m: [35m[Errno 98] Address already in use[0m
