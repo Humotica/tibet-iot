@@ -222,7 +222,19 @@ async def main():
     node = IoTNode("jis:dl360:hub", config=config)
 
     for did, trust in TRUSTED_DEVICES.items():
-        node.set_trust(did, trust)
+        # POSTURE, GEEN SCALAR — en bestand tegen beide pakketversies.
+        #
+        # tibet-ping 0.3.5 haalde `set_trust(did, float)` weg: "zero-trust by identity, not by a
+        # scalar — the scalar is dead" (#92/#94). De hub draait nu nog op 0.3.2. Zonder deze tak
+        # zou een uitrol van 0.3.5 de hub bij het opstarten doden op een AttributeError, en zou
+        # een terugrol 'm nog eens doden. Twee armen maakt de volgorde onbelangrijk.
+        #
+        # DEZE SHIM HEEFT EEN EINDDATUM: zodra 0.3.5 overal draait valt de else-tak weg, samen
+        # met de getallen in TRUSTED_DEVICES. Blijft 'ie staan, dan is het schuld i.p.v. overgang.
+        if hasattr(node, "set_known"):
+            node.set_known(did)
+        else:
+            node.set_trust(did, trust)
         # Pre-register trusted devices
         device_id = did.split(":")[-1] if ":" in did else did
         overlay.register(device_id=device_id, capabilities=["trusted"])
